@@ -3,14 +3,12 @@
 # merge databases in json argument to existing databases in /etc and
 # dump as new databases specified by arguments
 
-# allow function-like print when using Python 2
-from __future__ import print_function
-
 import argparse
 import io
 import pwent2dict
 import json
 from pprint import pprint
+import sys
 
 desc = """
 Load another server's password/group database in JSON format and merge
@@ -24,7 +22,26 @@ parser.add_argument('newdbdir', type=str, help='directory into which the new dat
 args = parser.parse_args()
 
 otherdb = json.load(io.open(args.otherdb))
-pprint(otherdb)
+#pprint(otherdb)
 
 mydb = pwent2dict.pwent2dict()
-pprint(mydb)
+#pprint(mydb)
+
+# check for system users in imported db not in local db and warn about
+# them
+
+missing_system_users = []
+for otheruser in otherdb['passwd'].values():
+    #pprint(type(otheruser))
+    #pprint(type(mydb['passwd']))
+    if (otheruser['pw_uid'] < 1000) and (not otheruser['pw_name'] in mydb['passwd']):
+        missing_system_users.append(otheruser['pw_name'])
+
+if missing_system_users:
+    print(
+        "system users on other system not on local system:\n ",
+        ' '.join(missing_system_users),
+        "\nInstall missing packages and try again.",
+        file=sys.stderr)
+    sys.exit(1)
+
