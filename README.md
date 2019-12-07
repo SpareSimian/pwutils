@@ -1,4 +1,4 @@
-# pwutils
+# Linux user/group Migration
 Import/export/merge passwd/group/shadow database for user/group migration
 
 These scripts are intended to be used to migrate users and groups  from an existing
