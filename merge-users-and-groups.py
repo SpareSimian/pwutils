@@ -112,6 +112,8 @@ def merge_other_into_my(id_key, name_key, other, my, id_collisions):
     for value in other.values():
         otherid = value[id_key]
         othername = value[name_key]
+        # add only if it's a new name, else preserve the local
+        # user/group
         if not has_entry_by_id(name_key, othername, my):
             if id_in_use(id_key, otherid, my):
                 id_collisions.append(otherid)
@@ -138,6 +140,9 @@ merge_other_into_my('gr_gid', 'gr_name', othergroup, mygroup, gid_collisions)
 print("Merging new users...")
 uid_collisions = []
 merge_other_into_my('pw_uid', 'pw_name', otherpasswd, mypasswd, uid_collisions)
+
+# uid_new and uid_collisions has the list of users on the other
+# system that need to be added to shadow.
 
 # now insert new users and groups that had collisions, choosing "holes"
 # above 1000 for non-system users and 500 for system users
@@ -187,12 +192,11 @@ def user_name_to_uid(passwd, name):
 for othershadowvalue in othershadow.values():
     othershadowname = othershadowvalue['sp_nam']
     othershadowuid = user_name_to_uid(otherpasswd, othershadowname)
-    if not is_system_id(othershadowuid):
-        if not othershadowname in myshadow:
-            # here we don't have to worry about uid collision
-            myshadow[othershadowname] = othershadowvalue
-        elif myshadow[othershadowname] != othershadowvalue:
-            print("Shadow", othershadowname, "differs")
+    if not has_entry_by_id('sp_nam', othershadowname, myshadow):
+        # here we don't have to worry about uid collision
+        myshadow[othershadowname] = othershadowvalue
+    elif myshadow[othershadowname] != othershadowvalue:
+        print("Shadow", othershadowname, "differs")
 
 # convert the primary group names back to gids in mypasswd
 
@@ -215,7 +219,7 @@ def write_pw_entry(file, entry, keys):
             file.write(":")
         field = entry[key]
         if isinstance(field, list):
-            file.write(" ".join(field))
+            file.write(",".join(field))
         else:
             file.write(str(field))
         first = False
