@@ -10,4 +10,4 @@ import json
 # dump to json
 
 json.dump(pwent2dict.pwent2dict(), sys.stdout)
-#pprint(all_dict)
+
