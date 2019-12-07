@@ -42,7 +42,7 @@ def is_system_id(id):
 
 missing_system_users = []
 for otheruser in otherpasswd.values():
-    if is_system_id(otheruser['pw_uid'] and (not otheruser['pw_name'] in mypasswd):
+    if is_system_id(otheruser['pw_uid']) and (not otheruser['pw_name'] in mypasswd):
         missing_system_users.append(otheruser['pw_name'])
 
 if missing_system_users:
@@ -99,21 +99,21 @@ def merge_other_into_my(id_key, name_key, other, my, id_collisions):
                         othername, "there and",
                         get_entry_by_id(id_key, otherid, my)[name_key],
                         "here\n")
-                    else:
-                        my[othername] = value
-            #elif my[othername] != value:
-                #print("", othername, "differs\n")
+                else:
+                    my[othername] = value
+                #elif my[othername] != value:
+                #   print("", othername, "differs\n")
 
 # here we do groups first in case we need to fix up the pw_gid on a gid
 # collision
 
 # merge new groups from otherdb into mydb
 gid_collisions = []
-merge_other_into_my('gr_uid', 'gr_name', othergroup, mygroup, gid_collections)
+merge_other_into_my('gr_gid', 'gr_name', othergroup, mygroup, gid_collisions)
 
 # merge new users from otherdb into mydb
 uid_collisions = []
-merge_other_into_my('pw_uid', 'pw_name', otherpasswd, mypasswd, uid_collections)
+merge_other_into_my('pw_uid', 'pw_name', otherpasswd, mypasswd, uid_collisions)
 
 # now insert new users and groups that had collisions, choosing "holes"
 # above 1000
