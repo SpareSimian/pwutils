@@ -104,6 +104,22 @@ def merge_other_into_my(id_key, name_key, other, my, id_collisions):
                 #elif my[othername] != value:
                 #   print("", othername, "differs\n")
 
+# change group id number in passwd table to its name to avoid needing
+# to remap it on collision later
+
+def gid_to_group_name(groups, gid):
+    for group in groups.values():
+        if gid == group["gr_gid"]:
+            return group["gr_name"]
+    raise KeyError(gid + " in password file not in group file")
+
+def passwd_gid_to_group_name(passwd, groups):
+    for user in passwd.values():
+        user["pw_gid"] = gid_to_group_name(groups, user["pw_gid"])
+
+passwd_gid_to_group_name(otherpasswd, othergroup)
+passwd_gid_to_group_name(mypasswd, mygroup)
+
 # here we do groups first in case we need to fix up the pw_gid on a gid
 # collision
 
