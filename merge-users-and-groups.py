@@ -10,6 +10,7 @@ import json
 from pprint import pprint
 import sys
 import copy
+import os
 
 desc = """
 Load another server's password/group database in JSON format and merge
@@ -100,7 +101,7 @@ def merge_other_into_my(id_key, name_key, other, my, id_collisions):
                         get_entry_by_id(id_key, otherid, my)[name_key],
                         "here\n")
                 else:
-                    my[othername] = value
+                    my[otherid] = value
                 #elif my[othername] != value:
                 #   print("", othername, "differs\n")
 
@@ -140,7 +141,7 @@ def insert_new_entries_allocating_ids(ids, id_key, dict_key, source_dict, destin
         new_entry = copy.deep_copy(source_entry)
         new_id = find_free_id(id_key, destination_dict)
         new_entry[id_key] = new_id
-        destination_dict[new_entry[dict_key]] = new_entry
+        destination_dict[new_id] = new_entry
 
 insert_new_entries_allocating_ids(ids=uid_collisions, id_key='pw_uid', dict_key='pw_name',
     source_dict=otherpasswd, destination_dict=mypasswd)
@@ -151,9 +152,15 @@ insert_new_entries_allocating_ids(ids=gid_collisions, id_key='gr_gid', dict_key=
 # merge shadows from otherdb into mydb (no ID processing!)
 # must be done last after UID collisions are handled.
 
+def user_name_to_uid(passwd, name):
+    for user in passwd.values():
+        if name == user["pw_name"]:
+            return user["pw_uid"]
+    raise KeyError("user " + name + " not in passwd file")
+
 for othershadowvalue in othershadow.values():
     othershadowname = othershadowvalue['sp_nam']
-    othershadowuid = otherpasswd[othershadowname]['pw_uid']
+    othershadowuid = user_name_to_uid(otherpasswd, othershadowname)
     if not is_system_id(othershadowuid):
         if not othershadowname in myshadow:
             # here we don't have to worry about uid collision
@@ -161,3 +168,61 @@ for othershadowvalue in othershadow.values():
         elif myshadow[othershadowname] != othershadowvalue:
             print("Shadow", othershadowname, "differs\n")
 
+# convert the primary group names back to gids in mypasswd
+
+def group_name_to_gid(groups, name):
+    for group in groups.values():
+        if name  == group["gr_name"]:
+            return group["gr_gid"]
+    raise KeyError("primary group " + name + " in password file not in group file")
+
+for user in mypasswd.values():
+    user["pw_gid"] = group_name_to_gid(mygroup, user["pw_gid"])
+    
+# dump it all out into caller's directory
+
+if not os.path.isdir(args.newdbdir):
+    os.mkdir(args.newdbdir)
+
+def write_pw_entry(file, entry, keys):
+    first = True
+    for key in keys:
+        if not first:
+            file.write(":")
+        field = entry[key]
+        if isinstance(field, list):
+            file.write(" ".join(field))
+        else:
+            file.write(str(field))
+        first = False
+    file.write("\n")
+
+def write_pw_file(basename, dict, keys):
+    f = open(os.path.join(args.newdbdir, basename), "w+")
+    for entry in dict.values():
+        write_pw_entry(f, entry, keys)
+    f.close()
+    
+write_pw_file("passwd.new", mypasswd, [
+    'pw_name',
+    'pw_passwd',
+    'pw_uid',
+    'pw_gid',
+    'pw_gecos',
+    'pw_dir',
+    'pw_shell'])
+write_pw_file("group.new", mygroup, [
+    'gr_name',
+    'gr_passwd',
+    'gr_gid',
+    'gr_mem'])
+write_pw_file("shadow.new", myshadow, [
+    'sp_nam',
+    'sp_pwd',
+    'sp_lstchg',
+    'sp_min',
+    'sp_max',
+    'sp_warn',
+    'sp_inact',
+    'sp_expire',
+    'sp_flag'])
