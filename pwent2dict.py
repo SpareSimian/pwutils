@@ -24,7 +24,7 @@ def pwent2dict():
 		 pwent4dict['pw_gecos'] = pwent.pw_gecos
 		 pwent4dict['pw_dir'] = pwent.pw_dir
 		 pwent4dict['pw_shell'] = pwent.pw_shell
-		 passwd_dict[pwent.pw_name] = pwent4dict
+		 passwd_dict[pwent.pw_uid] = pwent4dict
 	all_dict['passwd'] = passwd_dict
         
 	groups = grp.getgrall()
@@ -35,7 +35,7 @@ def pwent2dict():
 		 grpent4dict['gr_passwd'] = grpent.gr_passwd
 		 grpent4dict['gr_gid'] = grpent.gr_gid
 		 grpent4dict['gr_mem'] = grpent.gr_mem
-		 groups_dict[grpent.gr_name] = grpent4dict
+		 groups_dict[grpent.gr_gid] = grpent4dict
 	all_dict['group'] = groups_dict
 
 	shadow = spwd.getspall()
